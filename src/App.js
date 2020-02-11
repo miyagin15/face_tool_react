@@ -1,6 +1,9 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
+import DropCsvArea from './components/DropCsvArea';
+import GraphArea from './components/GraphArea';
+import Graph from './components/Graph';
 
 function App() {
   return (
@@ -18,6 +21,15 @@ function App() {
         >
           Learn React
         </a>
+        <DropCsvArea>
+          sample
+    </DropCsvArea>
+    <GraphArea>
+          sample
+    </GraphArea>
+    <Graph>
+          sample
+    </Graph>
       </header>
     </div>
   );

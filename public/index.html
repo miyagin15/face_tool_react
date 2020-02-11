@@ -1,43 +1,150 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+<HTML>
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+<head>
+  <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+</head>
+
+<body>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+  <div id="drag-area" style="border-style: dotted;background-color: #ffbbff;">
+    <p>アップロードするファイルをドロップ</p>
+    <p>または</p>
+    <div class="btn-group">
+      <input type="file" multiple="multiple" style="display:none;" name="files" />
+      <button id="btn">ファイルを選択</button>
+    </div>
+  </div>
+  <div>
+    <p>
+      <h3 id="result" style="margin-right:20px; margin-top:1px;float:left;"><span>結果 </span></h3>
+    </p>
+  </div>
+  <h3>グラフ</h3>
+  <!-- <div style="position:absolute; top:300px; left:0px; width:1000px; height:1000px;">
+      <canvas id="myChart"></canvas>
+      　　　
+      　</div> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.bundle.js"></script>
+  <script>
+    $(function () {
+      /*================================================
+        ファイルをドロップした時の処理
+      =================================================*/
+      $('#drag-area').bind('drop', function (e) {
+        // デフォルトの挙動を停止
+        e.preventDefault();
+        // ファイル情報を取得
+        var files = e.originalEvent.dataTransfer.files;
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+        uploadFiles(files);
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+      }).bind('dragenter', function () {
+        // デフォルトの挙動を停止
+        return false;
+      }).bind('dragover', function () {
+        // デフォルトの挙動を停止
+        return false;
+      });
+
+      /*================================================
+        ダミーボタンを押した時の処理
+      =================================================*/
+      $('#btn').click(function () {
+        // ダミーボタンとinput[type="file"]を連動
+        $('input[type="file"]').click();
+      });
+
+      $('input[type="file"]').change(function () {
+        // ファイル情報を取得
+        var files = this.files;
+        console.log(files);
+
+        uploadFiles(files);
+      });
+
+    });
+    /*================================================
+      アップロード処理
+    =================================================*/
+    function uploadFiles(files) {
+      // FormDataオブジェクトを用意
+      var fd = new FormData();
+
+      // ファイルの個数を取得
+      var filesLength = files.length;
+
+      // ファイル情報を追加
+      for (var i = 0; i < filesLength; i++) {
+        // alert(files[i]["name"]);
+        fd.append("files[]", files[i]);
+      }
+
+      // Ajaxでアップロード処理をするファイルへ内容渡す
+      $.ajax({
+        url: '/postText',
+        type: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+        success: function (data) {
+          // alert(data);
+          count = data.trial_count
+          $('#result').text(' 推測結果: ' + "回数:" + data.trial_count + "," + "throughtput:" + data.p + "," + "時間:" + data.trial_time);
+          // console.log(filesLength);
+          for (let i = 0 ; i<filesLength; i++){
+            createGlaph(i,data.df_goal_position, data.df_position, data.df_index, data.file_name)
+          }
+        }
+      });
+      function createGlaph(i,list_x, list_y, index, file_name) {
+        var div = document.createElement("div");
+        div.style="position:absolute; "+"top:"+300*(i+1)+"px; "+"left:0px; width:1000px; height:1000px;";
+        // div.style="position:absolute; top:300px; left:0px; width:1000px; height:1000px;";
+        var canvas = document.createElement("canvas");
+        canvas.id="myChart"+i;
+        document.body.appendChild(canvas);
+        var ctx = document.getElementById("myChart"+i);
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: index,
+            datasets: [
+              {
+                label: '目標位置',
+                data: list_x,
+                borderColor: "rgba(255,0,0,1)",
+                backgroundColor: "rgba(0,0,0,0)"
+              },
+              {
+                label: '実際の位置',
+                data: list_y,
+                borderColor: "rgba(0,0,255,1)",
+                backgroundColor: "rgba(0,0,0,0)"
+              }
+            ],
+          },
+          options: {
+            title: {
+              display: true,
+              text: file_name
+            },
+            scales: {
+              yAxes: [{
+                ticks: {
+                  suggestedMax: 4000,
+                  suggestedMin: 0,
+                  stepSize: 500,
+                  callback: function (value, index, values) {
+                    return value
+                  }
+                }
+              }]
+            },
+          }
+        });
+      }
+    }
+  </script>
+</body>
+
 </html>
